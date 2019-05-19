@@ -7,27 +7,27 @@ template <class T>
 class SimpleQueue {
 
 private:
-	std::queue<T> sub_queue;
+	std::queue<T> queue;
 	std::mutex queue_mutex;
 
 public:
 	void push(T const & data){
 		std::lock_guard<std::mutex> lock(this->queue_mutex);
-		this->sub_queue.push(data);
+		this->queue.push(data);
 	}
 
 	bool empty(){
 		std::lock_guard<std::mutex> lock(this->queue_mutex);
-		return this->sub_queue.empty();
+		return this->queue.empty();
 	}
 
 	T front(){
 		std::lock_guard<std::mutex> lock(this->queue_mutex);
-		return this->sub_queue.front();
+		return this->queue.front();
 	}
 
 	void pop(){
 		std::lock_guard<std::mutex> lock(this->queue_mutex);
-		this->sub_queue.pop();
+		this->queue.pop();
 	}
 };
