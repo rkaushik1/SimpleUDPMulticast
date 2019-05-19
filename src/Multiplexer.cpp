@@ -27,50 +27,94 @@ void Multiplexer::stop(){
 }
 
 void Multiplexer::receive(address addr){
-	int sock;
-	unsigned int clilen;
-	char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
+	unsigned int addrlen = sizeof(cli_addr);
+	int sock, recvlen;
+	unsigned char buf[256];
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
-	if (sock < 0){
-    	std::cout << "ERROR opening socket\n";
+	if (sock < 0) {
+		perror("cannot create socket\n");
+		return;
 	}
-	memset(&serv_addr, 0, sizeof(serv_addr)); 
-    memset(&cli_addr, 0, sizeof(cli_addr));
+
+	memset((char *) &serv_addr, 0, sizeof(serv_addr));
 
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = inet_addr(addr.addr.c_str());
-	serv_addr.sin_port = (unsigned short) stoi(addr.port);
+	serv_addr.sin_port = htons(stoi(addr.port));
 
-	if(bind(sock, (struct sockaddr *) &serv_addr, 
-		sizeof(serv_addr)) < 0) {
-		std::cout << "ERROR on binding\n";
+	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
+		perror("bind failed");
+		return;
 	}
 
-    int n; 
-    unsigned int len;
-    std::cout << "calling recvfrom\n";
-    // n = recvfrom(sock, (char *)buffer, 256,  
-    // 	0, ( struct sockaddr *) &cli_addr, 
-    // 	&len); 
-    sendto(sock, (const char *)"hello", strlen("hello"), 
-        0, (const struct sockaddr *) &serv_addr,  
-            sizeof(serv_addr)); 
-    std::cout << "called recvfrom\n";
-    buffer[n] = '\0'; 
-    std::cout << "Here is the message: " << buffer << std::endl;
-
-	for(int i = 0; i < 5; i++){
-		this->queue.push("mystring");
+	while(this->running) {
+		std::stringstream ss;
+		printf("waiting on port %d\n", stoi(addr.port));
+		recvlen = recvfrom(sock, buf, 256, 0, 
+			(struct sockaddr *) &cli_addr, &addrlen);
+		printf("received %d bytes\n", recvlen);
+		if (recvlen > 0) {
+			buf[recvlen] = 0;
+			ss << buf;
+			this->queue.push(ss.str());
+			printf("received message: \"%s\"\n", buf);
+			std::cout << this->queue.front() << std::endl;
+		}
+		else {
+			exit(1);
+		}
 	}
+	std::cout << "Closing port: " << addr.port << std::endl;
+
 }
 
 void Multiplexer::send(address addr){
+	int seq = 0;
+	struct sockaddr_in serv_addr, cli_addr;
+	unsigned int addrlen = sizeof(cli_addr);
+	int sock, recvlen;
+	char buf[256];
+
+	int slen = sizeof(serv_addr);
+
+	sock = socket(AF_INET, SOCK_DGRAM, 0);
+	if (sock < 0) {
+		printf("socket created\n");
+	}
+
+	memset((char *)&cli_addr, 0, sizeof(cli_addr));
+
+	/* pick any port number not used */
+	cli_addr.sin_family = AF_INET;
+	cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	cli_addr.sin_port = htons(0);
+
+	if (bind(sock, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0) {
+		perror("bind failed");
+		return;
+	} 
+
+	memset((char *) &serv_addr, 0, sizeof(serv_addr));
+
+	serv_addr.sin_family = AF_INET;
+	serv_addr.sin_port = htons(stoi(addr.port));
+	serv_addr.sin_addr.s_addr = inet_addr(addr.addr.c_str());
+
 	while(this->running){
 		if(!this->queue.empty()){
-			std::cout << this->queue.front() << std::endl;
+
+			strcpy(buf, (this->queue.front() + ":" 
+				+ std::to_string(seq)).c_str());
+			seq++;
 			this->queue.pop();
-		}
+
+			if (sendto(sock, buf, std::strlen(buf), 0, 
+				(struct sockaddr *)&serv_addr, slen)==-1){
+				perror("sendto");
+			}
+		}	
 	}
+	close(sock);
 }
