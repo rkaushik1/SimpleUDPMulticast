@@ -6,6 +6,11 @@
 #include <vector>
 #include <string>
 #include <atomic>
+#include <unistd.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h> 
 
 #include "SimpleQueue.h"
 
@@ -22,7 +27,7 @@ private:
 	std::atomic<bool> running;
 	address addrOut;
 
-	void listen(address addr);
+	void receive(address addr);
 	void send(address addr);
 
 
