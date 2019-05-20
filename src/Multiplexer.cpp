@@ -51,10 +51,8 @@ void Multiplexer::receive(address addr){
 
 	while(this->running) {
 		std::stringstream ss;
-		printf("waiting on port %d\n", stoi(addr.port));
 		recvlen = recvfrom(sock, buf, 256, 0, 
 			(struct sockaddr *) &cli_addr, &addrlen);
-		printf("received %d bytes\n", recvlen);
 		if (recvlen > 0) {
 			buf[recvlen] = 0;
 			ss << buf;
@@ -62,18 +60,14 @@ void Multiplexer::receive(address addr){
 			printf("received message: \"%s\"\n", buf);
 			std::cout << this->queue.front() << std::endl;
 		}
-		else {
-			exit(1);
-		}
 	}
 	std::cout << "Closing port: " << addr.port << std::endl;
-
+	close(sock);
 }
 
 void Multiplexer::send(address addr){
 	int seq = 0;
 	struct sockaddr_in serv_addr, cli_addr;
-	unsigned int addrlen = sizeof(cli_addr);
 	int sock, recvlen;
 	char buf[256];
 
@@ -84,14 +78,15 @@ void Multiplexer::send(address addr){
 		printf("socket created\n");
 	}
 
-	memset((char *)&cli_addr, 0, sizeof(cli_addr));
+	memset((char *) &cli_addr, 0, sizeof(cli_addr));
 
-	/* pick any port number not used */
+	/* need a port number not used */
 	cli_addr.sin_family = AF_INET;
 	cli_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	cli_addr.sin_port = htons(0);
 
-	if (bind(sock, (struct sockaddr *)&cli_addr, sizeof(cli_addr)) < 0) {
+	if (bind(sock, (struct sockaddr *) &cli_addr, 
+		sizeof(cli_addr)) < 0) {
 		perror("bind failed");
 		return;
 	} 
@@ -111,7 +106,7 @@ void Multiplexer::send(address addr){
 			this->queue.pop();
 
 			if (sendto(sock, buf, std::strlen(buf), 0, 
-				(struct sockaddr *)&serv_addr, slen)==-1){
+				(struct sockaddr *) &serv_addr, slen)==-1){
 				perror("sendto");
 			}
 		}	
