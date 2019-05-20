@@ -30,11 +30,11 @@ void Multiplexer::receive(address addr){
 	struct sockaddr_in serv_addr, cli_addr;
 	unsigned int addrlen = sizeof(cli_addr);
 	int sock, recvlen;
-	unsigned char buf[256];
+	char buf[256];
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
-		perror("cannot create socket\n");
+		perror("socket failed\n");
 		return;
 	}
 
@@ -45,7 +45,7 @@ void Multiplexer::receive(address addr){
 	serv_addr.sin_port = htons(stoi(addr.port));
 
 	if (bind(sock, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
-		perror("bind failed");
+		perror("bind failed\n");
 		return;
 	}
 
@@ -57,7 +57,6 @@ void Multiplexer::receive(address addr){
 			buf[recvlen] = 0;
 			ss << buf;
 			this->queue.push(ss.str());
-			printf("received message: \"%s\"\n", buf);
 			std::cout << this->queue.front() << std::endl;
 		}
 	}
@@ -66,7 +65,7 @@ void Multiplexer::receive(address addr){
 }
 
 void Multiplexer::send(address addr){
-	int seq = 0;
+	unsigned int seq = 0;
 	struct sockaddr_in serv_addr, cli_addr;
 	int sock, recvlen;
 	char buf[256];
@@ -75,7 +74,8 @@ void Multiplexer::send(address addr){
 
 	sock = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sock < 0) {
-		printf("socket created\n");
+		perror("socket failed\n");
+		return;
 	}
 
 	memset((char *) &cli_addr, 0, sizeof(cli_addr));
@@ -87,7 +87,7 @@ void Multiplexer::send(address addr){
 
 	if (bind(sock, (struct sockaddr *) &cli_addr, 
 		sizeof(cli_addr)) < 0) {
-		perror("bind failed");
+		perror("bind failed\n");
 		return;
 	} 
 
@@ -107,7 +107,7 @@ void Multiplexer::send(address addr){
 
 			if (sendto(sock, buf, std::strlen(buf), 0, 
 				(struct sockaddr *) &serv_addr, slen)==-1){
-				perror("sendto");
+				perror("sendto failed\n");
 			}
 		}	
 	}
